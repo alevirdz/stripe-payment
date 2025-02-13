@@ -1,0 +1,26 @@
+{
+  "name": "agendas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.5.46",
+    "mysql2": "^3.12.0",
+    "nodemon": "^3.1.9",
+    "sequelize": "^6.37.5",
+    "stripe": "^17.6.0"
+  },
+  "devDependencies": {
+    "terser": "^5.37.0"
+  }
+}
