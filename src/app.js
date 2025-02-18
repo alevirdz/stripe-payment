@@ -6,7 +6,7 @@ dotenv.config();
 
 const app = express();
 app.set('port', process.env.PORT);
-//app.use(express.json());
+// app.use(express.json());
 app.use(bodyParser.raw({ type: 'application/json' }));
 // Configuración de CORS
 app.use(cors({

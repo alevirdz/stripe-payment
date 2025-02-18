@@ -132,12 +132,14 @@ const confirmPaymentIntent = async (paymentIntentId) => {
 
 const stripeWebhook = async (body, sig, webhookSecret) => {
     let event;
+    
     try {
-        event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } catch (err) {
-      console.log("Ocurrio un error!")
-        return { success: false, message: `Webhook Error: ${err.message}`, status: 400 };
-    }
+      // Verificamos la firma del evento
+      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+  } catch (err) {
+      console.log("Ocurrio un error en la verificación de la firma:", err);
+      return { success: false, message: `Webhook Error: ${err.message}`, status: 400 };
+  }
     // Guardar el evento en la tabla de webhooks
     await createEventHookInDB(event);
 };
