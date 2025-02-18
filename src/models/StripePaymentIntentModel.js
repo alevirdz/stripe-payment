@@ -33,6 +33,6 @@ const PaymentIntent = connection.define('StripePaymentIntent', {
 });
 
 // Un intento de pago pertenece a un cliente
-PaymentIntent.belongsTo(StripeCustomer, { foreignKey: 'customer_id', onDelete: 'CASCADE' });
+//PaymentIntent.belongsTo(StripeCustomer, { foreignKey: 'customer_id', onDelete: 'CASCADE' });
 
 module.exports = PaymentIntent;

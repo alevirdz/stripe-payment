@@ -1,4 +1,3 @@
-// Importamos el modelo correctamente
 const { DataTypes } = require('sequelize');
 const connection = require('../database/mysql');
 const StripeCustomer = require('./stripeCustumerModel');
@@ -32,6 +31,6 @@ const PaymentMethod = connection.define('PaymentMethod', {
 });
 
 //Un método de pago pertenece a un cliente
-PaymentMethod.belongsTo(StripeCustomer, { foreignKey: 'customer_id', onDelete: 'CASCADE' });
+PaymentMethod.belongsTo(StripeCustomer, { foreignKey: 'stripe_customer_id', onDelete: 'CASCADE' });
 
 module.exports = PaymentMethod;
