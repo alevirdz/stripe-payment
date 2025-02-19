@@ -1,17 +1,19 @@
 const stripeMiddleware = require('../middleware/stripeMiddleware');
-const { createCustumer, addPaymentMethod, createPaymentIntent, confirmPaymentIntent, stripeWebhook } = require('../services/stripeService');
+const { createCustumer, createPaymentMethod, createPaymentIntent, confirmPaymentIntent, stripeWebhook } = require('../services/stripeService');
 const dotenv = require ('dotenv');
 dotenv.config();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);  //Eliminar
+// const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 //En los siguientes 2 metodos requieres un lado admin para permitir añadir sus tarjetas
 exports.createCustomer = async (req, res) => {
   const { name, email } = req.body;
 
   const validate = stripeMiddleware.validateStripeCustomerData(name, email, res);
-
   try {
     if (validate) {
+      //IN BD
       const createdCustomer = await createCustumer(name, email);
+
       res.status(201).json({
         message: 'Usuario creado exitosamente',
         customerId: createdCustomer.id,
@@ -31,7 +33,7 @@ exports.addPaymentMethod = async (req, res) => {
 
   try {
     // Llamamos al servicio para agregar el método de pago
-    const paymentMethod = await addPaymentMethod(customerId, paymentMethodId);
+    const paymentMethod = await createPaymentMethod(customerId, paymentMethodId);
 
     res.status(200).json({
       message: 'Método de pago asociado correctamente',
@@ -115,6 +117,4 @@ exports.handleWebhook  = async (req, res) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   
   const webhook = await stripeWebhook(req.body, sig, webhookSecret);
-  
-
 };

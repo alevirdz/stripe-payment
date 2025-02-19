@@ -1,23 +1,21 @@
 const stripePaymentMethodModel = require('../models/stripePaymentMethodModel');
 
-const {createPaymentIntentInDB, createOrUpdatePaymentIntentInDB, createEventHookInDB } = require('../taskfile/stripeDataService')
+const {createCustomerInDB, createCustomerMethodInDB, createOrUpdatePaymentIntentInDB, createEventHookInDB } = require('../taskfile/stripeDataService')
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); 
 
 const createCustumer = async (name, email) => {
     try {
-        // Crear el cliente en Stripe
+        // Registrar cliente en Stripe
         const stripeCustomer = await stripe.customers.create({
             email: email,
             name: name || '',
-        });
+        }).catch(error => {
+          console.error(error);
+          throw new Error("No se pudo registrar al cliente en stripe");
+      });
 
-        // Guardar el cliente en la base de datos
-        const newCustomer = await stripeCustumerModel.create({
-            stripe_customer_id: stripeCustomer.id,
-            email: stripeCustomer.email,
-            name: stripeCustomer.name,
-        });
-
+        // Guardar en la base de datos
+        const saveStripeCustomer = await createCustomerInDB(stripeCustomer);
         return stripeCustomer;
 
     } catch (error) {
@@ -26,12 +24,13 @@ const createCustumer = async (name, email) => {
 };
 
 
-const addPaymentMethod = async (customerId, paymentMethodId) => {
+const createPaymentMethod = async (customerId, paymentMethodId) => {
     try {
         // Primero, adjuntamos el paymentMethod al cliente
         const paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, {
             customer: customerId,
         });
+        console.log(paymentMethod)
 
         // Luego, actualizamos el cliente para establecer el paymentMethod como predeterminado
         const updatedCustomer = await stripe.customers.update(customerId, {
@@ -46,18 +45,14 @@ const addPaymentMethod = async (customerId, paymentMethodId) => {
         console.log('Método de pago adjuntado y configurado como predeterminado:', paymentMethodDetails);
 
         // Si es necesario, puedes guardar los detalles en la base de datos
-        const newPaymentMethod = await stripePaymentMethodModel.create({
-            stripe_payment_method_id: paymentMethodDetails.id,
-            card_brand: paymentMethodDetails.card.brand,
-            last4: paymentMethodDetails.card.last4,
-            exp_month: paymentMethodDetails.card.exp_month,
-            exp_year: paymentMethodDetails.card.exp_year,
-            customer_id: customerId,
-        });
+        // Guardar en la base de datos
+        const saveStripeMethod = await createCustomerMethodInDB(stripeCustomer);
 
+        
+        console.log(saveStripeMethod)
         return {
             customer: updatedCustomer,  // Devolver los datos del cliente actualizado
-            paymentMethod: newPaymentMethod,
+            // paymentMethod: newPaymentMethod,
         };
     } catch (error) {
         throw new Error('Error al agregar el método de pago: ' + error.message);
@@ -148,7 +143,7 @@ const stripeWebhook = async (body, sig, webhookSecret) => {
 
 module.exports = {
     createCustumer,
-    addPaymentMethod,
+    createPaymentMethod,
     createPaymentIntent,
     confirmPaymentIntent,
     stripeWebhook,
