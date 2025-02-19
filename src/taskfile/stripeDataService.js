@@ -134,6 +134,37 @@ const createOrUpdatePaymentIntentInDB = async (paymentIntent) => {
 };
 
 
+// const createEventHookInDB = async (event) => {
+//     try {
+//         switch (event.type) {
+//             case 'payment_intent.succeeded':
+//             case 'payment_intent.payment_failed':
+//             case 'payment_intent.amount_capturable_updated':
+//             case 'payment_intent.canceled':
+//                 try {
+//                     await stripeWebhookModel.create({
+//                         event_type: event.type,
+//                         event_data: event.data,
+//                         event_id: event.id,
+//                         failure_reason: event.data.object.failure_reason || null,
+//                         status: event.data.object.status,
+//                         order_id: event.data.object.metadata.order_id || null,
+//                         customer_id: event.data.object.customer || null,
+//                     });
+//                     return { success: true, message: `${event.type} registrado exitosamente`, status: 200 };
+//                 } catch (error) {
+//                     console.error('Error al guardar el evento de Stripe en la base de datos:', error);
+//                     return { success: false, message: 'Error al guardar el evento', status: 500 };
+//                 }
+
+//             default:
+//                 return { success: false, message: `Evento no manejado: ${event.type}`, status: 400 };
+//         }
+//     } catch (error) {
+//         return { success: false, message: 'Error interno al procesar el webhook', status: 500 };
+//     }
+// };
+
 const createEventHookInDB = async (event) => {
     try {
         switch (event.type) {
@@ -141,22 +172,7 @@ const createEventHookInDB = async (event) => {
             case 'payment_intent.payment_failed':
             case 'payment_intent.amount_capturable_updated':
             case 'payment_intent.canceled':
-                try {
-                    await stripeWebhookModel.create({
-                        event_type: event.type,
-                        event_data: event.data,
-                        event_id: event.id,
-                        failure_reason: event.data.object.failure_reason || null,
-                        status: event.data.object.status,
-                        order_id: event.data.object.metadata.order_id || null,
-                        customer_id: event.data.object.customer || null,
-                    });
-                    return { success: true, message: `${event.type} registrado exitosamente`, status: 200 };
-                } catch (error) {
-                    console.error('Error al guardar el evento de Stripe en la base de datos:', error);
-                    return { success: false, message: 'Error al guardar el evento', status: 500 };
-                }
-
+                return await handlePaymentIntentStatusEvent(event); // Llamada a la función renombrada
             default:
                 return { success: false, message: `Evento no manejado: ${event.type}`, status: 400 };
         }
@@ -165,6 +181,46 @@ const createEventHookInDB = async (event) => {
     }
 };
 
+const handlePaymentIntentStatusEvent = async (event) => {
+    try {
+        // Guardar el evento en la base de datos (tabla de Webhooks)
+        await stripeWebhookModel.create({
+            event_type: event.type,
+            event_data: event.data,
+            event_id: event.id,
+            failure_reason: event.data.object.failure_reason || null,
+            status: event.data.object.status,
+            order_id: event.data.object.metadata.order_id || null,
+            customer_id: event.data.object.customer || null,
+        });
+
+        // Obtener el id del PaymentIntent y el nuevo status
+        const paymentIntentId = event.data.object.id;
+        const newStatus = event.data.object.status;
+
+        // Actualizar el estado del PaymentIntent en la base de datos usando Sequelize
+        const [affectedRows] = await stripePaymentIntentModel.update(
+            { 
+                status: newStatus, 
+                updatedAt: new Date() 
+            },
+            { 
+                where: { stripe_payment_intent_id: paymentIntentId } 
+            }
+        );
+
+        // Verificar si se actualizó el PaymentIntent
+        if (affectedRows === 0) {
+            console.log('No se encontró el PaymentIntent con el ID:', paymentIntentId);
+            return { success: false, message: 'No se encontró el PaymentIntent para actualizar', status: 404 };
+        }
+
+        return { success: true, message: `${event.type} registrado exitosamente y estado actualizado`, status: 200 };
+    } catch (error) {
+        console.error('Error al guardar el evento de Stripe en la base de datos:', error);
+        return { success: false, message: 'Error al guardar el evento y actualizar el estado', status: 500 };
+    }
+};
 
 module.exports = {
     createCustomerInDB,
